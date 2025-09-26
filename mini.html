@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Minimal Image Gallery</title>
+</head>
+
+<body>
+  <h1>Minimal Image Gallery</h1>
+
+  <input type="file" id="files" multiple accept="image/*">
+  <button onclick="upload()">Upload</button>
+
+  <input type="url" id="url" placeholder="Image URL">
+  <button onclick="downloadUrl()">Download</button>
+
+  <button onclick="loadGallery()">Refresh</button>
+
+  <div id="status"></div>
+  <div id="gallery" style="display: flex; flex-wrap: wrap;"></div>
+
+  <script>
+    // Get the base URL dynamically
+    const API = new URL('.', window.location.href).href.slice(0, -1);
+
+    // Register SW
+    navigator.serviceWorker.register('./sw.js');
+
+    // Upload files
+    async function upload() {
+      const files = document.getElementById('files').files;
+      const formData = new FormData();
+      Array.from(files).forEach(f => formData.append('images', f));
+
+      const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
+      const data = await res.json();
+
+      document.getElementById('status').textContent = data.success ? 'Uploaded!' : data.error;
+      if (data.success) loadGallery();
+    }
+
+    // Download from URL
+    async function downloadUrl() {
+      const url = document.getElementById('url').value;
+      if (!url) return;
+
+      const res = await fetch(`${API}/upload-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+
+      document.getElementById('status').textContent = data.success ? 'Downloaded!' : data.error;
+      if (data.success) {
+        document.getElementById('url').value = '';
+        loadGallery();
+      }
+    }
+
+    // Load gallery
+    async function loadGallery() {
+      const res = await fetch(`${API}/list.json`);
+      const images = await res.json();
+
+      document.getElementById('gallery').innerHTML = images.map(img => `
+                <div style="display:inline-block;margin:10px;border:1px solid #ccc;padding:10px;flex: 1 1 100px;">
+                    <img src="${img.url}" style="width:150px;height:150px;object-fit:cover;display:block" onclick="window.open('${img.url}','_blank')">
+                    <div style="font-size:12px;margin:5px 0; word-break:break-all">${img.filename}</div>
+                    <button onclick="deleteImg('${img.filename}')">Delete</button>
+                </div>
+            `).join('');
+    }
+
+    // Delete image
+    async function deleteImg(filename) {
+      if (!confirm('Delete?')) return;
+
+      const res = await fetch(`${API}/delete/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+      const data = await res.json();
+
+      document.getElementById('status').textContent = data.success ? 'Deleted!' : data.error;
+      if (data.success) loadGallery();
+    }
+
+    // Auto-load gallery on start
+    window.addEventListener('load', loadGallery);
+  </script>
+</body>
+
+</html>

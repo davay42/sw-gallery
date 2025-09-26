@@ -1,0 +1,43 @@
+{
+  "name": "Local Image Gallery",
+  "short_name": "ImageGallery",
+  "description": "Store and serve images locally using Service Worker API interception",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#8b6f47",
+  "background_color": "#f5f1eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["productivity", "utilities", "photo"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f5f1eb'/%3E%3Crect x='10' y='10' width='80' height='80' fill='%23c4a484' rx='5'/%3E%3Ccircle cx='30' cy='30' r='8' fill='%238b6f47'/%3E%3Cpath d='M15 70 L35 50 L50 65 L70 45 L85 60 L85 85 L15 85 Z' fill='%238b6f47'/%3E%3C/svg%3E",
+      "sizes": "100x100",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23f5f1eb'/%3E%3Crect x='50' y='50' width='412' height='412' fill='%23c4a484' rx='25'/%3E%3Ccircle cx='150' cy='150' r='40' fill='%238b6f47'/%3E%3Cpath d='M75 360 L180 250 L260 330 L360 230 L437 310 L437 437 L75 437 Z' fill='%238b6f47'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'%3E%3Crect width='1200' height='800' fill='%23f5f1eb'/%3E%3Ctext x='600' y='400' text-anchor='middle' font-family='Arial' font-size='48' fill='%238b6f47'%3ELocal Image Gallery%3C/text%3E%3C/svg%3E",
+      "sizes": "1200x800",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Gallery view showing uploaded images"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "serviceworker": {
+    "src": "sw.js",
+    "scope": "/",
+    "use_cache": false
+  }
+}

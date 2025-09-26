@@ -4,7 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Store and serve images locally using Service Worker API interception">
+    <meta name="theme-color" content="#8b6f47">
     <title>Local Image Gallery</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f5f1eb'/%3E%3Crect x='10' y='10' width='80' height='80' fill='%23c4a484' rx='5'/%3E%3Ccircle cx='30' cy='30' r='8' fill='%238b6f47'/%3E%3Cpath d='M15 70 L35 50 L50 65 L70 45 L85 60 L85 85 L15 85 Z' fill='%238b6f47'/%3E%3C/svg%3E">
+
     <style>
         * {
             margin: 0;
@@ -63,10 +69,16 @@
             cursor: pointer;
             font-size: 16px;
             transition: background 0.3s ease;
+            margin: 5px;
         }
 
         .upload-btn:hover {
             background: #8b6f47;
+        }
+
+        .upload-btn:disabled {
+            background: #ddd;
+            cursor: not-allowed;
         }
 
         .url-input {
@@ -90,6 +102,7 @@
             background: rgba(255, 255, 255, 0.6);
             padding: 10px;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
         }
 
         .image-card:hover {
@@ -109,11 +122,38 @@
             opacity: 0.8;
         }
 
-        .filename {
+        .image-info {
             padding: 8px 0;
             font-size: 12px;
             color: #8b6f47;
+        }
+
+        .filename {
             word-break: break-all;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            opacity: 0.7;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .image-card:hover .delete-btn {
+            opacity: 1;
         }
 
         .status {
@@ -133,6 +173,12 @@
             background: rgba(40, 167, 69, 0.1);
             color: #155724;
         }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b6f47;
+        }
     </style>
 </head>
 
@@ -150,198 +196,165 @@
             <div style="margin: 20px 0;">or</div>
 
             <input type="url" class="url-input" id="urlInput" placeholder="Enter image URL...">
-            <button class="upload-btn" onclick="loadFromUrl()">Load from URL</button>
+            <button class="upload-btn" id="urlBtn" onclick="loadFromUrl()">Load from URL</button>
         </div>
 
         <div id="status"></div>
-        <div class="gallery" id="gallery"></div>
+        <div id="gallery" class="loading">Loading gallery...</div>
     </div>
 
     <script type="module">
-        const DB_NAME = 'ImageGallery';
-        const STORE_NAME = 'images';
-        const BASE_URL = 'http://localhost:5500';
-
-        let db;
-
-        // Initialize app
-        async function init() {
-            await registerServiceWorker();
-            await initDB();
-            await loadGallery();
-            setupEventListeners();
-            showStatus('Gallery ready!', 'success');
+        const api = new URL('.', location.href).href.slice(0, -1)
+        const $ = selector => document.querySelector(selector)
+        const on = (el, event, handler) => el.addEventListener(event, handler)
+        
+        const request = async (endpoint, options = {}) => {
+            const res = await fetch(`${api}/${endpoint}`, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options
+            })
+            return res.json()
         }
 
-        // Register service worker
-        async function registerServiceWorker() {
-            if (!('serviceWorker' in navigator)) {
-                console.log('Service workers not supported');
-                showStatus('Service workers not supported', 'error');
-                return;
-            }
-
-            try {
-                console.log('Registering service worker...');
-                const registration = await navigator.serviceWorker.register('./sw.js');
-                console.log('Service worker registered:', registration);
-
-                await navigator.serviceWorker.ready;
-                console.log('Service worker ready');
-                showStatus('Service worker ready', 'success');
-            } catch (error) {
-                console.error('Service worker registration failed:', error);
-                showStatus('Service worker failed: ' + error.message, 'error');
-            }
+        const toggleButton = (btn, disabled = true, text) => {
+            btn.disabled = disabled
+            if (text) btn.textContent = text
         }
 
-        // Initialize IndexedDB
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, 1);
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    resolve();
-                };
-                request.onupgradeneeded = (e) => {
-                    const database = e.target.result;
-                    if (!database.objectStoreNames.contains(STORE_NAME)) {
-                        database.createObjectStore(STORE_NAME, { keyPath: 'filename' });
-                    }
-                };
-            });
+        const showStatus = (message, type = '') => {
+            const status = $('#status')
+            status.textContent = message
+            status.className = `status ${type}`
+            setTimeout(() => status.textContent = '', 3000)
         }
 
-        // Setup event listeners
-        function setupEventListeners() {
-            const fileInput = document.getElementById('fileInput');
-            const uploadArea = document.getElementById('uploadArea');
-            const urlInput = document.getElementById('urlInput');
-
-            fileInput.addEventListener('change', handleFiles);
-
-            urlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') loadFromUrl();
-            });
-
-            // Drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                handleFiles({ target: { files: e.dataTransfer.files } });
-            });
+        const formatFileSize = bytes => {
+            if (bytes === 0) return '0 B'
+            const k = 1024
+            const sizes = ['B', 'KB', 'MB', 'GB']
+            const i = Math.floor(Math.log(bytes) / Math.log(k))
+            return (bytes / k ** i).toFixed(1) + ' ' + sizes[i]
         }
 
-        // Handle file selection
-        async function handleFiles(event) {
-            const files = Array.from(event.target.files);
-            for (const file of files) {
-                await storeImage(file);
-            }
-            await loadGallery();
+        async function uploadFiles(files) {
+            const btn = $('.upload-btn')
+            toggleButton(btn, true, 'Uploading...')
+            showStatus(`Uploading ${files.length} file(s)...`, 'success')
+
+            const formData = new FormData()
+            files.forEach(f => formData.append('images', f))
+
+            const result = await request('upload', { method: 'POST', body: formData })
+            showStatus(result.success 
+                ? `Uploaded ${result.uploaded.length} image(s)` 
+                : `Upload failed: ${result.error}`, 
+                result.success ? 'success' : 'error'
+            )
+
+            if (result.success) await loadGallery()
+            toggleButton(btn, false, 'Choose Files')
+            $('#fileInput').value = ''
         }
 
-        // Load image from URL
         async function loadFromUrl() {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) return;
+            const input = $('#urlInput')
+            const url = input.value.trim()
+            if (!url) return
 
-            showStatus('Loading image...', 'success');
+            const btn = $('#urlBtn')
+            toggleButton(btn, true, 'Loading...')
+            showStatus('Downloading image...', 'success')
 
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Failed to fetch image');
+            const result = await request('upload-url', {
+                method: 'POST',
+                body: JSON.stringify({ url })
+            })
 
-            const blob = await response.blob();
-            const filename = url.split('/').pop() || `image-${Date.now()}.jpg`;
-            const file = new File([blob], filename, { type: blob.type });
+            showStatus(result.success 
+                ? `Downloaded: ${result.filename}` 
+                : `Download failed: ${result.error}`,
+                result.success ? 'success' : 'error'
+            )
 
-            await storeImage(file);
-            await loadGallery();
-
-            document.getElementById('urlInput').value = '';
-            showStatus(`Loaded: ${filename}`, 'success');
+            if (result.success) {
+                await loadGallery()
+                input.value = ''
+            }
+            toggleButton(btn, false, 'Load from URL')
         }
 
-        // Store image in IndexedDB
-        function storeImage(file) {
-            return new Promise((resolve, reject) => {
-                const filename = `${Date.now()}-${file.name}`;
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-
-                const imageData = {
-                    filename,
-                    blob: file,
-                    timestamp: Date.now()
-                };
-
-                const request = store.put(imageData);
-                request.onsuccess = () => resolve(filename);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        // Load and display gallery
         async function loadGallery() {
-            const images = await getAllImages();
-            const gallery = document.getElementById('gallery');
+            const images = await request('list.json')
+            const gallery = $('#gallery')
 
+            if (!images.length) {
+                gallery.innerHTML = '<div class="loading">No images yet. Upload some!</div>'
+                return
+            }
+
+            gallery.className = 'gallery'
             gallery.innerHTML = images.map(img => `
                 <div class="image-card">
+                    <button class="delete-btn" onclick="deleteImage('${img.filename}')" title="Delete">×</button>
                     <img class="thumbnail" 
-                         src="${BASE_URL}/#${img.filename}" 
+                         src="${img.url}" 
                          alt="${img.filename}"
-                         onclick="window.open('${BASE_URL}/#${img.filename}', '_blank')">
-                    <div class="filename">${img.filename}</div>
+                         onclick="window.open('${img.url}', '_blank')">
+                    <div class="image-info">
+                        <div class="filename">${img.filename}</div>
+                        <div class="file-size">${formatFileSize(img.size)}</div>
+                    </div>
                 </div>
-            `).join('');
+            `).join('')
         }
 
-        // Get all images from IndexedDB
-        function getAllImages() {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
+        async function deleteImage(filename) {
+            if (!confirm(`Delete ${filename}?`)) return
 
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
+            showStatus('Deleting...', 'success')
+            const result = await request(`delete/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+
+            showStatus(result.success ? 'Image deleted' : `Delete failed: ${result.error}`, 
+                      result.success ? 'success' : 'error')
+
+            if (result.success) await loadGallery()
         }
 
-        // Show status message
-        function showStatus(message, type = '') {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status ${type}`;
-            setTimeout(() => status.textContent = '', 3000);
+        function setupEventListeners() {
+            const uploadArea = $('#uploadArea')
+            
+            on($('#fileInput'), 'change', e => uploadFiles(Array.from(e.target.files)))
+            on($('#urlInput'), 'keypress', e => e.key === 'Enter' && loadFromUrl())
+            
+            on(uploadArea, 'dragover', e => {
+                e.preventDefault()
+                uploadArea.classList.add('dragover')
+            })
+            
+            on(uploadArea, 'dragleave', () => uploadArea.classList.remove('dragover'))
+            
+            on(uploadArea, 'drop', e => {
+                e.preventDefault()
+                uploadArea.classList.remove('dragover')
+                uploadFiles(Array.from(e.dataTransfer.files))
+            })
+
+            on(window, 'unhandledrejection', e => showStatus('Error: ' + e.reason, 'error'))
         }
 
-        // Global functions
-        window.loadFromUrl = loadFromUrl;
+        async function init() {
+            if ('serviceWorker' in navigator) {
+                await navigator.serviceWorker.register('./sw.js')
+                await navigator.serviceWorker.ready
+            }
+            
+            await loadGallery()
+            setupEventListeners()
+            showStatus('Gallery ready!', 'success')
+        }
 
-        // Global error handler
-        window.addEventListener('error', (e) => {
-            showStatus('Error: ' + e.message, 'error');
-        });
-
-        window.addEventListener('unhandledrejection', (e) => {
-            showStatus('Error: ' + e.reason, 'error');
-            e.preventDefault();
-        });
-
-        // Start the app
-        init();
+        Object.assign(window, { loadFromUrl, deleteImage })
+        init()
     </script>
 </body>
 
