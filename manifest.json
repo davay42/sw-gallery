@@ -5,7 +5,7 @@
   "start_url": "/sw-gallery/",
   "display": "standalone",
   "theme_color": "#8b6f47",
-  "background_color": "#f5f1eb",
+  "background_color": "#e8ddd4",
   "orientation": "portrait-primary",
   "scope": "/sw-gallery/",
   "lang": "en",

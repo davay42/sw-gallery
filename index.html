@@ -20,31 +20,36 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #f5f1eb 0%, #e8ddd4 100%);
+            background: #e8ddd4;
             color: #5d4e37;
             min-height: 100vh;
-            padding: 20px;
+            padding: 0;
+            margin: 0;
+            overscroll-behavior: none;
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         h1 {
             text-align: center;
-            margin-bottom: 30px;
+            margin: 10px 0;
             color: #8b6f47;
             font-weight: 300;
+            font-size: 1.5em;
         }
 
         .upload-area {
             background: rgba(255, 255, 255, 0.4);
-            border: 2px dashed #c4a484;
-            padding: 40px;
+            border-bottom: 1px solid #c4a484;
+            padding: 10px 20px;
             text-align: center;
-            margin-bottom: 30px;
             transition: all 0.3s ease;
+            flex-shrink: 0;
         }
 
         .upload-area:hover {
@@ -92,17 +97,23 @@
         }
 
         .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            display: flex;
             gap: 20px;
-            margin-top: 30px;
+            padding: 20px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-padding: 20px;
+            flex-grow: 1;
         }
 
         .image-card {
+            flex: 0 0 300px;
             background: rgba(255, 255, 255, 0.6);
             padding: 10px;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
+            scroll-snap-align: start;
+            height: fit-content;
         }
 
         .image-card:hover {
@@ -112,10 +123,11 @@
 
         .thumbnail {
             width: 100%;
-            height: 150px;
+            height: 200px;
             object-fit: cover;
             cursor: pointer;
             transition: opacity 0.2s ease;
+            border-radius: 8px;
         }
 
         .thumbnail:hover {
