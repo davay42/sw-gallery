@@ -4,7 +4,7 @@
   "description": "Store and serve images locally using Service Worker API interception",
   "start_url": "/sw-gallery/",
   "display": "standalone",
-  "theme_color": "#8b6f47",
+  "theme_color": "#e8ddd4",
   "background_color": "#e8ddd4",
   "orientation": "portrait-primary",
   "scope": "/sw-gallery/",

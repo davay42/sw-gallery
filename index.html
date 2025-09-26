@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <meta name="description" content="Store and serve images locally using Service Worker API interception">
-    <meta name="theme-color" content="#8b6f47">
+    <meta name="theme-color" content="#e8ddd4">
     <title>Local Image Gallery</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon"
@@ -16,6 +16,14 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html {
+            background: #e8ddd4;
+            overscroll-behavior: none;
+            height: 100%;
+            position: fixed;
+            width: 100%;
         }
 
         body {
