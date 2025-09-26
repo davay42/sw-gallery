@@ -2,12 +2,12 @@
   "name": "Local Image Gallery",
   "short_name": "ImageGallery",
   "description": "Store and serve images locally using Service Worker API interception",
-  "start_url": "/",
+  "start_url": "/sw-gallery/",
   "display": "standalone",
   "theme_color": "#8b6f47",
   "background_color": "#f5f1eb",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "/sw-gallery/",
   "lang": "en",
   "categories": ["productivity", "utilities", "photo"],
   "icons": [
@@ -37,7 +37,7 @@
   "prefer_related_applications": false,
   "serviceworker": {
     "src": "sw.js",
-    "scope": "/",
+    "scope": "/sw-gallery/",
     "use_cache": false
   }
 }
