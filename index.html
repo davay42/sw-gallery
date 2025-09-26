@@ -207,10 +207,15 @@
         const api = new URL('.', location.href).href.slice(0, -1)
         const $ = selector => document.querySelector(selector)
         const on = (el, event, handler) => el.addEventListener(event, handler)
-        
+
         const request = async (endpoint, options = {}) => {
+            // Don't set Content-Type for FormData, browser will set it automatically with boundary
+            const headers = options.body instanceof FormData
+                ? {}
+                : { 'Content-Type': 'application/json' };
+
             const res = await fetch(`${api}/${endpoint}`, {
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 ...options
             })
             return res.json()
@@ -245,9 +250,9 @@
             files.forEach(f => formData.append('images', f))
 
             const result = await request('upload', { method: 'POST', body: formData })
-            showStatus(result.success 
-                ? `Uploaded ${result.uploaded.length} image(s)` 
-                : `Upload failed: ${result.error}`, 
+            showStatus(result.success
+                ? `Uploaded ${result.uploaded.length} image(s)`
+                : `Upload failed: ${result.error}`,
                 result.success ? 'success' : 'error'
             )
 
@@ -270,8 +275,8 @@
                 body: JSON.stringify({ url })
             })
 
-            showStatus(result.success 
-                ? `Downloaded: ${result.filename}` 
+            showStatus(result.success
+                ? `Downloaded: ${result.filename}`
                 : `Download failed: ${result.error}`,
                 result.success ? 'success' : 'error'
             )
@@ -314,25 +319,25 @@
             showStatus('Deleting...', 'success')
             const result = await request(`delete/${encodeURIComponent(filename)}`, { method: 'DELETE' })
 
-            showStatus(result.success ? 'Image deleted' : `Delete failed: ${result.error}`, 
-                      result.success ? 'success' : 'error')
+            showStatus(result.success ? 'Image deleted' : `Delete failed: ${result.error}`,
+                result.success ? 'success' : 'error')
 
             if (result.success) await loadGallery()
         }
 
         function setupEventListeners() {
             const uploadArea = $('#uploadArea')
-            
+
             on($('#fileInput'), 'change', e => uploadFiles(Array.from(e.target.files)))
             on($('#urlInput'), 'keypress', e => e.key === 'Enter' && loadFromUrl())
-            
+
             on(uploadArea, 'dragover', e => {
                 e.preventDefault()
                 uploadArea.classList.add('dragover')
             })
-            
+
             on(uploadArea, 'dragleave', () => uploadArea.classList.remove('dragover'))
-            
+
             on(uploadArea, 'drop', e => {
                 e.preventDefault()
                 uploadArea.classList.remove('dragover')
@@ -347,7 +352,7 @@
                 await navigator.serviceWorker.register('./sw.js')
                 await navigator.serviceWorker.ready
             }
-            
+
             await loadGallery()
             setupEventListeners()
             showStatus('Gallery ready!', 'success')

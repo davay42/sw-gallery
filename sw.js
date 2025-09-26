@@ -128,7 +128,7 @@ async function handleUploadImage(request) {
                     filename,
                     size: file.size,
                     type: file.type,
-                    url: `${API_BASE}/get/${filename}`
+                    url: `${getApiBase()}/get/${filename}`
                 });
             }
         }
@@ -187,7 +187,7 @@ async function handleUploadFromUrl(request) {
             filename: uniqueFilename,
             size: blob.size,
             type: blob.type,
-            url: `${API_BASE}/get/${uniqueFilename}`
+            url: `${getApiBase()}/get/${uniqueFilename}`
         }), {
             headers: {
                 'Content-Type': 'application/json',
